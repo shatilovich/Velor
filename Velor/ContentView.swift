@@ -14,39 +14,62 @@ import UIKit
 // MARK: - Haptics
 
 enum Haptics {
-    private static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+    // ✅ Предотвращение спама haptics
+    private static var lastHapticTime: [String: Date] = [:]
+    private static let minimumInterval: TimeInterval = 0.1
+
+    private static func canTrigger(for key: String) -> Bool {
+        guard let last = lastHapticTime[key] else {
+            lastHapticTime[key] = Date()
+            return true
+        }
+
+        let interval = Date().timeIntervalSince(last)
+        if interval >= minimumInterval {
+            lastHapticTime[key] = Date()
+            return true
+        }
+        return false
+    }
+
+    private static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle, key: String) {
+        guard canTrigger(for: key) else { return }
         let gen = UIImpactFeedbackGenerator(style: style)
         gen.prepare()
         gen.impactOccurred()
     }
 
+    private static func notify(_ type: UINotificationFeedbackGenerator.FeedbackType, key: String) {
+        guard canTrigger(for: key) else { return }
+        let gen = UINotificationFeedbackGenerator()
+        gen.prepare()
+        gen.notificationOccurred(type)
+    }
+
     static func tap() {
-        impact(.light)
+        impact(.light, key: "tap")
     }
 
     static func start() {
-        impact(.light)
+        impact(.light, key: "start")
     }
 
     static func pause() {
-        impact(.soft)
+        impact(.soft, key: "pause")
     }
 
     static func resetTap() {
-        impact(.rigid)
+        impact(.rigid, key: "resetTap")
     }
 
     static func warning() {
-        let gen = UINotificationFeedbackGenerator()
-        gen.prepare()
-        gen.notificationOccurred(.warning)
+        notify(.warning, key: "warning")
     }
 
     static func error() {
-        let gen = UINotificationFeedbackGenerator()
-        gen.prepare()
-        gen.notificationOccurred(.error)
-        impact(.heavy)
+        notify(.error, key: "error")
+        // Optional extra punch, also throttled under its own key
+        impact(.heavy, key: "errorHeavy")
     }
 }
 
@@ -1005,6 +1028,7 @@ private struct ZoneCard: View {
     let onTap: () -> Void
 
     @State private var isPressing = false
+    @State private var shouldPulse = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -1068,6 +1092,18 @@ private struct ZoneCard: View {
         .buttonStyle(.plain)
         .scaleEffect(isPressing ? 0.97 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressing)
+        .scaleEffect(shouldPulse ? 1.05 : 1.0)
+        .animation(
+            shouldPulse
+                ? .easeInOut(duration: 0.5).repeatForever(autoreverses: true)
+                : .default,
+            value: shouldPulse
+        )
+        .onChange(of: status) { _, newStatus in
+            withAnimation {
+                shouldPulse = newStatus == .danger
+            }
+        }
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in isPressing = true }
