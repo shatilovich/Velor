@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Combine
 
 @MainActor
 final class StopwatchesStore: ObservableObject {
@@ -11,14 +11,17 @@ final class StopwatchesStore: ObservableObject {
 
     private var ticker: AnyCancellable?
 
+    // Settings provider injected from ContentView
     var settingsProvider: () -> AppSettings = { AppSettings() }
+
+    // Cache last statuses to avoid repeated haptics
     private var lastStatus: [Zone: ZoneStatus] = [:]
 
     init() {
         loadFromDisk()
-        // Проставляем кэш статусов без хаптики при старте/восстановлении
+        // Seed status cache without haptics on launch/restore
         primeStatusCache(settings: settingsProvider())
-        // Догоняем время для running зон и включаем тикер при необходимости
+        // Catch up elapsed for running zones and start/stop ticker accordingly
         refreshRunningElapsed(now: Date())
         syncTicker()
     }
@@ -27,7 +30,6 @@ final class StopwatchesStore: ObservableObject {
         guard var sw = items[zone] else { return }
 
         if sw.isRunning {
-            // Pause: фиксируем точное прошедшее время и останавливаем.
             if let startedAt = sw.startedAt {
                 let delta = Int(Date().timeIntervalSince(startedAt))
                 sw.elapsedSeconds = max(0, sw.baseElapsedSeconds + delta)
@@ -35,7 +37,6 @@ final class StopwatchesStore: ObservableObject {
             sw.isRunning = false
             sw.startedAt = nil
         } else {
-            // Start/Resume: снимок текущего elapsed и стартовая дата.
             sw.isRunning = true
             sw.baseElapsedSeconds = sw.elapsedSeconds
             sw.startedAt = Date()
@@ -68,7 +69,7 @@ final class StopwatchesStore: ObservableObject {
     }
 
     func pauseAll() {
-        // Freeze current elapsed for all running timers first.
+        // Freeze current elapsed for all running timers first
         refreshRunningElapsed(now: Date())
 
         for z in Zone.allCases {
@@ -92,25 +93,12 @@ final class StopwatchesStore: ObservableObject {
 
     func appWillResignActive() {
         refreshRunningElapsed(now: Date())
+        primeStatusCache(settings: settingsProvider())
         stop()
         saveToDisk()
     }
 
-    func refreshRunningElapsed(now: Date) {
-        for z in Zone.allCases {
-            guard var sw = items[z], sw.isRunning, let startedAt = sw.startedAt else { continue }
-            let delta = Int(now.timeIntervalSince(startedAt))
-            sw.elapsedSeconds = max(0, sw.baseElapsedSeconds + delta)
-            items[z] = sw
-        }
-    }
-
-    func primeStatusCache(settings: AppSettings) {
-        for z in Zone.allCases {
-            let sw = items[z] ?? ZoneStopwatch()
-            lastStatus[z] = settings.status(for: z, sw: sw)
-        }
-    }
+    // MARK: - Ticker
 
     private func syncTicker() {
         let hasRunning = items.values.contains(where: { $0.isRunning })
@@ -139,14 +127,22 @@ final class StopwatchesStore: ObservableObject {
             }
     }
 
+    private func stop() {
+        ticker?.cancel()
+        ticker = nil
+    }
+
+    // MARK: - Status transitions
+
     private func handleStatusTransitions(settings: AppSettings) {
         for z in Zone.allCases {
             let sw = items[z] ?? ZoneStopwatch()
 
-            // Не спамим уведомлениями, пока зона не бежит.
+            // Compute new status and store it after checks
             let newStatus = settings.status(for: z, sw: sw)
             defer { lastStatus[z] = newStatus }
 
+            // Do not spam haptics while a zone is not running
             guard sw.isRunning else { continue }
 
             let oldStatus = lastStatus[z]
@@ -160,73 +156,65 @@ final class StopwatchesStore: ObservableObject {
         }
     }
 
-    private func stop() {
-        ticker?.cancel()
-        ticker = nil
-    }
-}
+    // MARK: - Persistence
 
-// MARK: - Persistence
-
-private enum PersistKeys {
-    static let stopwatchesState = "stopwatchesState_v1"
-}
-
-private struct PersistedStopwatch: Codable {
-    var elapsedSeconds: Int
-    var isRunning: Bool
-    var startedAt: Date?
-    var baseElapsedSeconds: Int
-}
-
-private struct PersistedState: Codable {
-    var items: [String: PersistedStopwatch]
-}
-
-private extension StopwatchesStore {
-    func loadFromDisk() {
-        guard
-            let data = UserDefaults.standard.data(forKey: PersistKeys.stopwatchesState),
-            let state = try? JSONDecoder().decode(PersistedState.self, from: data)
-        else { return }
-
-        var restored: [Zone: ZoneStopwatch] = [:]
-
-        for (key, value) in state.items {
-            guard let zone = Zone(rawValue: key) else { continue }
-            restored[zone] = ZoneStopwatch(
-                elapsedSeconds: value.elapsedSeconds,
-                isRunning: value.isRunning,
-                startedAt: value.startedAt,
-                baseElapsedSeconds: value.baseElapsedSeconds
-            )
-        }
-
-        // Update only known zones; keep defaults for missing ones
-        for zone in Zone.allCases {
-            if let sw = restored[zone] {
-                items[zone] = sw
+    private func loadFromDisk() {
+        guard let data = UserDefaults.standard.data(forKey: PersistKeys.stopwatchesState) else { return }
+        do {
+            let decoded = try JSONDecoder().decode(PersistedState.self, from: data)
+            var dict: [Zone: ZoneStopwatch] = [:]
+            for z in Zone.allCases {
+                if let p = decoded.items[z.rawValue] {
+                    dict[z] = ZoneStopwatch(
+                        elapsedSeconds: max(0, p.elapsedSeconds),
+                        isRunning: p.isRunning,
+                        startedAt: p.startedAt,
+                        baseElapsedSeconds: max(0, p.baseElapsedSeconds)
+                    )
+                } else {
+                    dict[z] = ZoneStopwatch()
+                }
             }
+            items = dict
+        } catch {
+            // Ignore broken cache
         }
-
-        // Подстрахуемся, что в данные не попали некорректные значения
-        refreshRunningElapsed(now: Date())
-        stop()
     }
 
-    func saveToDisk() {
-        var snapshot: [String: PersistedStopwatch] = [:]
-
-        for (zone, sw) in items {
-            snapshot[zone.rawValue] = PersistedStopwatch(
+    private func saveToDisk() {
+        var payload: [String: PersistedStopwatch] = [:]
+        for z in Zone.allCases {
+            let sw = items[z] ?? ZoneStopwatch()
+            payload[z.rawValue] = PersistedStopwatch(
                 elapsedSeconds: sw.elapsedSeconds,
                 isRunning: sw.isRunning,
                 startedAt: sw.startedAt,
                 baseElapsedSeconds: sw.baseElapsedSeconds
             )
         }
+        do {
+            let data = try JSONEncoder().encode(PersistedState(items: payload))
+            UserDefaults.standard.set(data, forKey: PersistKeys.stopwatchesState)
+        } catch {
+            // Ignore encoding errors
+        }
+    }
 
-        guard let data = try? JSONEncoder().encode(PersistedState(items: snapshot)) else { return }
-        UserDefaults.standard.set(data, forKey: PersistKeys.stopwatchesState)
+    // MARK: - Helpers
+
+    private func refreshRunningElapsed(now: Date = Date()) {
+        for z in Zone.allCases {
+            guard var sw = items[z], sw.isRunning, let startedAt = sw.startedAt else { continue }
+            let delta = Int(now.timeIntervalSince(startedAt))
+            sw.elapsedSeconds = max(0, sw.baseElapsedSeconds + delta)
+            items[z] = sw
+        }
+    }
+
+    private func primeStatusCache(settings: AppSettings) {
+        for z in Zone.allCases {
+            let sw = items[z] ?? ZoneStopwatch()
+            lastStatus[z] = settings.status(for: z, sw: sw)
+        }
     }
 }
