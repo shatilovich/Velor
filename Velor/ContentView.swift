@@ -38,35 +38,22 @@ struct ContentView: View {
                             }
                         )
                         
-                        HStack(spacing: 12) {
-                            Button {
-                                Haptics.resetTap()
-                                store.resetAll()
-                            } label: {
-                                Label("Сбросить все", systemImage: "arrow.counterclockwise")
-                            }
-                            
-                            Button {
-                                Haptics.pause()
-                                store.pauseAll()
-                            } label: {
-                                Label("Пауза", systemImage: "pause.fill")
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                        .padding(.horizontal, 2)
+                        pauseButton
                     }
                     .padding(16)
                 }
             }
             .navigationTitle("Velor")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    HeaderIconButton(systemName: "arrow.counterclockwise", role: .destructive, tint: .primary) {
+                        Haptics.resetTap()
+                        store.resetAll()
+                    }
+
+                    HeaderIconButton(systemName: "gearshape") {
                         Haptics.tap()
                         showMenu = true
-                    } label: {
-                        Image(systemName: "gearshape")
                     }
                 }
             }
@@ -115,6 +102,48 @@ struct ContentView: View {
                 break
             }
         }
+    }
+}
+
+private extension ContentView {
+    var pauseButton: some View {
+        Button {
+            Haptics.pause()
+            store.pauseAll()
+        } label: {
+            Label("Пауза", systemImage: "pause.fill")
+                .font(.system(size: 17, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.primary)
+        .background(pauseButtonBackground)
+        .overlay(pauseButtonStroke)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 2)
+    }
+
+    @ViewBuilder
+    var pauseButtonBackground: some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+
+        if #available(iOS 26.0, *) {
+            shape
+                .fill(AppColors.cardSurface(for: effectiveColorScheme ?? .light))
+                .overlay {
+                    shape
+                        .fill(.clear)
+                        .glassEffect(.regular.interactive(), in: shape)
+                }
+        } else {
+            shape.fill(.ultraThinMaterial)
+        }
+    }
+
+    var pauseButtonStroke: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .stroke(AppColors.strokeSeparatorSubtle(), lineWidth: AppColors.strokeWidthHairline)
     }
 }
 
