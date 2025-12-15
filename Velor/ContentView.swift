@@ -43,14 +43,8 @@ struct ContentView: View {
                     .padding(16)
                 }
             }
+            .navigationTitle("Velor")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Text("Velor")
-                        .font(.system(size: 20, weight: .semibold))
-                        .allowsHitTesting(false)
-                        .accessibilityAddTraits(.isHeader)
-                }
-
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     HeaderIconButton(systemName: "arrow.counterclockwise", role: .destructive, tint: .primary) {
                         Haptics.resetTap()
@@ -114,25 +108,21 @@ struct ContentView: View {
 private extension ContentView {
     @ViewBuilder
     var pauseButton: some View {
-        // Show only when at least one timer is running
+        // Показывать только если есть хотя бы один запущенный таймер
         let hasRunning = store.items.values.contains(where: { $0.isRunning })
-
         if hasRunning {
-            if #available(iOS 26.0, *) {
-                Button {
+            if #available(iOS 18.0, *) {
+                let glassStyle: Glass = .regular
+                Button("Пауза", systemImage: "pause.fill") {
                     Haptics.pause()
                     store.pauseAll()
-                } label: {
-                    Label("Пауза", systemImage: "pause.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
                 }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.capsule)
-                .padding(.horizontal, 2)
+                .frame(maxWidth: .infinity)
+                .buttonStyle(.glass(glassStyle))
+                .controlSize(.extraLarge)
+                .buttonBorderShape(.automatic)
             } else {
-                // Fallback for older iOS: keep the previous material card look
+                // Fallback для более старых iOS
                 Button {
                     Haptics.pause()
                     store.pauseAll()
