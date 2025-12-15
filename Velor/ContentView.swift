@@ -43,8 +43,14 @@ struct ContentView: View {
                     .padding(16)
                 }
             }
-            .navigationTitle("Velor")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("Velor")
+                        .font(.system(size: 20, weight: .semibold))
+                        .allowsHitTesting(false)
+                        .accessibilityAddTraits(.isHeader)
+                }
+
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     HeaderIconButton(systemName: "arrow.counterclockwise", role: .destructive, tint: .primary) {
                         Haptics.resetTap()
@@ -106,22 +112,44 @@ struct ContentView: View {
 }
 
 private extension ContentView {
+    @ViewBuilder
     var pauseButton: some View {
-        Button {
-            Haptics.pause()
-            store.pauseAll()
-        } label: {
-            Label("Пауза", systemImage: "pause.fill")
-                .font(.system(size: 17, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+        // Show only when at least one timer is running
+        let hasRunning = store.items.values.contains(where: { $0.isRunning })
+
+        if hasRunning {
+            if #available(iOS 26.0, *) {
+                Button {
+                    Haptics.pause()
+                    store.pauseAll()
+                } label: {
+                    Label("Пауза", systemImage: "pause.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.capsule)
+                .padding(.horizontal, 2)
+            } else {
+                // Fallback for older iOS: keep the previous material card look
+                Button {
+                    Haptics.pause()
+                    store.pauseAll()
+                } label: {
+                    Label("Пауза", systemImage: "pause.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary)
+                .background(pauseButtonBackground)
+                .overlay(pauseButtonStroke)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .padding(.horizontal, 2)
+            }
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(.primary)
-        .background(pauseButtonBackground)
-        .overlay(pauseButtonStroke)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal, 2)
     }
 
     @ViewBuilder
