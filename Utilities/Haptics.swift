@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-import UIKit
-
-=======
 //
 //  Haptics.swift
 //  Velor
@@ -11,7 +7,6 @@ import UIKit
 
 import UIKit
 
->>>>>>> 613f70b (new)
 enum Haptics {
     // ✅ Предотвращение спама haptics
     private static var lastHapticTime: [String: Date] = [:]
@@ -67,10 +62,6 @@ enum Haptics {
 
     static func error() {
         notify(.error, key: "error")
-<<<<<<< HEAD
-        // Optional extra punch, also throttled under its own key
-=======
->>>>>>> 613f70b (new)
         impact(.heavy, key: "errorHeavy")
     }
 }
