@@ -1,0 +1,11 @@
+- Cannot find '' in scope
+- Expected expression
+- Expressions are not allowed at the top level
+
+Fix: Remove everything after the #Preview block so the file ends right after the preview closure. The correct end of the file should be:
+
+```swift:ContentView.swift
+#Preview {
+    ContentView()
+        .preferredColorScheme(.dark)
+}
