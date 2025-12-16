@@ -12,6 +12,7 @@ struct ContentView: View {
         let v = UserDefaults.standard.double(forKey: "warnPercent")
         return v == 0 ? 0.8 : v
     }()
+    @State private var confirmResetAll = false
     
     private var effectiveColorScheme: ColorScheme? {
         switch appTheme {
@@ -48,7 +49,7 @@ struct ContentView: View {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     HeaderIconButton(systemName: "arrow.counterclockwise", role: .destructive, tint: .primary) {
                         Haptics.resetTap()
-                        store.resetAll()
+                        confirmResetAll = true
                     }
 
                     HeaderIconButton(systemName: "gearshape") {
@@ -86,6 +87,15 @@ struct ContentView: View {
                 }
             )
         }
+        .alert("Сбросить все таймеры?", isPresented: $confirmResetAll) {
+            Button("Отменить", role: .cancel) {}
+            Button("Сбросить", role: .destructive) {
+                Haptics.error()
+                store.resetAll()
+            }
+        } message: {
+            Text("Все 4 зоны будут обнулены. Это действие нельзя отменить.")
+        }
         .preferredColorScheme(effectiveColorScheme)
         .onAppear {
             // Initialize settings into the store
@@ -111,8 +121,9 @@ private extension ContentView {
         // Показывать только если есть хотя бы один запущенный таймер
         let hasRunning = store.items.values.contains(where: { $0.isRunning })
         if hasRunning {
-            if #available(iOS 18.0, *) {
+            if #available(iOS 26.0, *) {
                 let glassStyle: Glass = .regular
+
                 Button("Пауза", systemImage: "pause.fill") {
                     Haptics.pause()
                     store.pauseAll()

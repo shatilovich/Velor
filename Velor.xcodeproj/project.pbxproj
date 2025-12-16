@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0C5233462EF207B300F0B3FB /* SoundEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C5233452EF207B300F0B3FB /* SoundEffect.swift */; };
 		0C6DE9FF2EF037D3000362AB /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6DE9FE2EF037D3000362AB /* Haptics.swift */; };
 		0C6DEA012EF037E7000362AB /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6DEA002EF037E7000362AB /* AppColors.swift */; };
 		0C6DEA032EF037F7000362AB /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6DEA022EF037F7000362AB /* Persistence.swift */; };
@@ -23,6 +24,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0C5233452EF207B300F0B3FB /* SoundEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundEffect.swift; sourceTree = "<group>"; };
 		0C63153E2EEEB5A200F3E0FA /* Velor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Velor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C6DE9FE2EF037D3000362AB /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		0C6DEA002EF037E7000362AB /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
@@ -123,6 +125,7 @@
 				0C6DE9FE2EF037D3000362AB /* Haptics.swift */,
 				0C6DEA002EF037E7000362AB /* AppColors.swift */,
 				0C6DEA022EF037F7000362AB /* Persistence.swift */,
+				0C5233452EF207B300F0B3FB /* SoundEffect.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -201,6 +204,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0C5233462EF207B300F0B3FB /* SoundEffect.swift in Sources */,
 				0C6DE9FF2EF037D3000362AB /* Haptics.swift in Sources */,
 				0C6DEA012EF037E7000362AB /* AppColors.swift in Sources */,
 				0C6DEA0D2EF03840000362AB /* StopwatchesStore.swift in Sources */,

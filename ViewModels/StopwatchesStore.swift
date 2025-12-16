@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UserNotifications
 
 @MainActor
 final class StopwatchesStore: ObservableObject {
@@ -16,6 +17,7 @@ final class StopwatchesStore: ObservableObject {
 
     // Cache last statuses to avoid repeated haptics
     private var lastStatus: [Zone: ZoneStatus] = [:]
+    private let didRequestNotifKey = "didRequestNotificationPermission"
 
     init() {
         loadFromDisk()
@@ -24,6 +26,7 @@ final class StopwatchesStore: ObservableObject {
         // Catch up elapsed for running zones and start/stop ticker accordingly
         refreshRunningElapsed(now: Date())
         syncTicker()
+        requestNotificationAuthorizationIfNeeded()
     }
 
     func toggle(_ zone: Zone) {
@@ -54,6 +57,7 @@ final class StopwatchesStore: ObservableObject {
         items[zone] = sw
         syncTicker()
         handleStatusTransitions(settings: settingsProvider())
+        SoundEffect.play(.warning)
         saveToDisk()
     }
 
@@ -89,6 +93,7 @@ final class StopwatchesStore: ObservableObject {
         refreshRunningElapsed(now: Date())
         primeStatusCache(settings: settingsProvider())
         syncTicker()
+        handleStatusTransitions(settings: settingsProvider())
     }
 
     func appWillResignActive() {
@@ -150,8 +155,16 @@ final class StopwatchesStore: ObservableObject {
 
             if newStatus == .warn {
                 Haptics.warning()
+                sendNotification(
+                    title: "Внимание",
+                    body: "\(z.title.replacingOccurrences(of: "\n", with: " ")) — приближается лимит"
+                )
             } else if newStatus == .danger {
                 Haptics.error()
+                sendNotification(
+                    title: "Лимит превышен",
+                    body: "\(z.title.replacingOccurrences(of: "\n", with: " ")) — время вышло!"
+                )
             }
         }
     }
@@ -216,5 +229,30 @@ final class StopwatchesStore: ObservableObject {
             let sw = items[z] ?? ZoneStopwatch()
             lastStatus[z] = settings.status(for: z, sw: sw)
         }
+    }
+
+    private func requestNotificationAuthorizationIfNeeded() {
+        // Ask once; if user changes it later, they can enable in Settings
+        if UserDefaults.standard.bool(forKey: didRequestNotifKey) { return }
+        UserDefaults.standard.set(true, forKey: didRequestNotifKey)
+
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
+            // Intentionally ignore result; app will behave gracefully without notifications.
+        }
+    }
+
+    private func sendNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil // immediate
+        )
+
+        UNUserNotificationCenter.current().add(request)
     }
 }
