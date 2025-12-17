@@ -11,6 +11,7 @@ struct ZoneGrid: View {
     let settings: AppSettings
     let items: [Zone: ZoneStopwatch]
     let onTapZone: (Zone) -> Void
+    let onLongPressZone: (Zone) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -83,7 +84,8 @@ struct TwoCardsRow: View {
             progress: progress,
             status: status,
             isRunning: sw.isRunning,
-            onTap: { onTapZone(zone) }
+            onTap: { onTapZone(zone) },
+            onLongPress: { onLongPressZone(zone) }
         )
     }
 }
