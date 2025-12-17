@@ -46,16 +46,20 @@ struct ContentView: View {
             }
             .navigationTitle("Velor")
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     HeaderIconButton(systemName: "arrow.counterclockwise", role: .destructive, tint: .primary) {
                         Haptics.resetTap()
                         confirmResetAll = true
                     }
-
+                    .labelStyle(.iconOnly)
+                }
+                ToolbarSpacer(placement: .topBarTrailing)
+                ToolbarItem(placement: .topBarTrailing) {
                     HeaderIconButton(systemName: "gearshape") {
                         Haptics.tap()
                         showMenu = true
                     }
+                    .labelStyle(.iconOnly)
                 }
             }
         }
@@ -98,7 +102,6 @@ struct ContentView: View {
         }
         .preferredColorScheme(effectiveColorScheme)
         .onAppear {
-            // Initialize settings into the store
             settings.warnPercent = warnPercent
             store.settingsProvider = { settings }
         }
@@ -118,12 +121,10 @@ struct ContentView: View {
 private extension ContentView {
     @ViewBuilder
     var pauseButton: some View {
-        // Показывать только если есть хотя бы один запущенный таймер
         let hasRunning = store.items.values.contains(where: { $0.isRunning })
         if hasRunning {
             if #available(iOS 26.0, *) {
                 let glassStyle: Glass = .regular
-
                 Button("Пауза", systemImage: "pause.fill") {
                     Haptics.pause()
                     store.pauseAll()
@@ -133,7 +134,6 @@ private extension ContentView {
                 .controlSize(.extraLarge)
                 .buttonBorderShape(.automatic)
             } else {
-                // Fallback для более старых iOS
                 Button {
                     Haptics.pause()
                     store.pauseAll()
@@ -156,7 +156,6 @@ private extension ContentView {
     @ViewBuilder
     var pauseButtonBackground: some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-
         if #available(iOS 26.0, *) {
             shape
                 .fill(AppColors.cardSurface(for: effectiveColorScheme ?? .light))
