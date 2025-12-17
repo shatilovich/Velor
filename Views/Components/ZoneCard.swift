@@ -15,15 +15,21 @@ struct ZoneCard: View {
     let status: ZoneStatus
     let isRunning: Bool
     let onTap: () -> Void
-    
+    let onLongPress: () -> Void
+
     @State private var isPressing = false
+    @State private var didTriggerLongPress = false
     @State private var shouldPulse = false
     @Environment(\.colorScheme) private var scheme
-    
+
     var body: some View {
         Button {
-            isPressing = false
-            onTap()
+            if didTriggerLongPress {
+                didTriggerLongPress = false
+            } else {
+                isPressing = false
+                onTap()
+            }
         } label: {
             ZStack {
                 let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -96,6 +102,14 @@ struct ZoneCard: View {
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in isPressing = true }
                 .onEnded { _ in isPressing = false }
+        )
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.6)
+                .onEnded { _ in
+                    didTriggerLongPress = true
+                    isPressing = false
+                    onLongPress()
+                }
         )
     }
     

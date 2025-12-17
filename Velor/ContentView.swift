@@ -36,6 +36,11 @@ struct ContentView: View {
                             onTapZone: { zone in
                                 Haptics.tap()
                                 store.toggle(zone)
+                            },
+                            onLongPressZone: { zone in
+                                guard (store.items[zone] ?? ZoneStopwatch()).isRunning else { return }
+                                Haptics.resetTap()
+                                store.reset(zone)
                             }
                         )
                         
